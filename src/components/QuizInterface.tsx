@@ -73,30 +73,53 @@ export const QuizInterface: React.FC = () => {
   // Voice input handler
   useEffect(() => {
     const handleVoiceInput = (event: CustomEvent) => {
-      const transcript = event.detail.toLowerCase();
+      const transcript = event.detail.toLowerCase().trim();
+      console.log('Voice input received:', transcript);
       
-      // Parse voice commands
-      if (transcript.includes('option a') || transcript.includes('first option')) {
+      // Enhanced voice command parsing
+      if (transcript.includes('option a') || transcript.includes('first option') || transcript.includes('choice a')) {
         handleAnswerSelect(0);
-      } else if (transcript.includes('option b') || transcript.includes('second option')) {
+      } else if (transcript.includes('option b') || transcript.includes('second option') || transcript.includes('choice b')) {
         handleAnswerSelect(1);
-      } else if (transcript.includes('option c') || transcript.includes('third option')) {
+      } else if (transcript.includes('option c') || transcript.includes('third option') || transcript.includes('choice c')) {
         handleAnswerSelect(2);
-      } else if (transcript.includes('option d') || transcript.includes('fourth option')) {
+      } else if (transcript.includes('option d') || transcript.includes('fourth option') || transcript.includes('choice d')) {
         handleAnswerSelect(3);
-      } else if (transcript.includes('next question') || transcript.includes('continue')) {
+      } else if (transcript.includes('next') || transcript.includes('continue') || transcript.includes('submit')) {
         handleNextQuestion();
-      } else if (transcript.includes('repeat question') || transcript.includes('read again')) {
+      } else if (transcript.includes('repeat') || transcript.includes('read') || transcript.includes('again')) {
         speakCurrentQuestion();
+      } else if (transcript.includes('start quiz') || transcript.includes('begin quiz')) {
+        if (!quizStarted) handleQuizStart();
       } else {
-        // Try to match the transcript with option text
-        const matchedOptionIndex = currentQuestion.options.findIndex(option =>
+        // Enhanced answer matching - try multiple approaches
+        let matchedOptionIndex = -1;
+        
+        // Direct text matching
+        matchedOptionIndex = currentQuestion.options.findIndex(option =>
           option.toLowerCase().includes(transcript) || transcript.includes(option.toLowerCase())
         );
-        if (matchedOptionIndex !== -1) {
+        
+        // Number matching (1, 2, 3, 4)
+        if (matchedOptionIndex === -1) {
+          const numberMatch = transcript.match(/\b([1-4])\b/);
+          if (numberMatch) {
+            matchedOptionIndex = parseInt(numberMatch[1]) - 1;
+          }
+        }
+        
+        // Letter matching (a, b, c, d)
+        if (matchedOptionIndex === -1) {
+          const letterMatch = transcript.match(/\b([abcd])\b/);
+          if (letterMatch) {
+            matchedOptionIndex = letterMatch[1].charCodeAt(0) - 'a'.charCodeAt(0);
+          }
+        }
+        
+        if (matchedOptionIndex !== -1 && matchedOptionIndex < currentQuestion.options.length) {
           handleAnswerSelect(matchedOptionIndex);
         } else {
-          speakText("I didn't understand. Please say 'option A', 'option B', 'option C', or 'option D', or repeat the answer text.");
+          speakText("I didn't understand. Please say 'option A', 'option B', 'option C', or 'option D', or say the answer directly. You can also say 'repeat question' to hear it again.");
         }
       }
     };
@@ -235,16 +258,18 @@ export const QuizInterface: React.FC = () => {
           keyboard navigation, and screen readers.
         </p>
         
-        <div className="bg-muted p-4 rounded-lg mb-6 text-left">
-          <h3 className="font-semibold mb-2">How to navigate:</h3>
-          <ul className="space-y-1 text-sm">
-            <li>• Use voice: Say "Option A", "Option B", etc.</li>
-            <li>• Use keyboard: Press 1, 2, 3, 4 or A, B, C, D</li>
-            <li>• Press Enter or Space to continue</li>
-            <li>• Press R to repeat the question</li>
-            <li>• Use the microphone button for voice input</li>
-          </ul>
-        </div>
+          <div className="bg-muted p-4 rounded-lg mb-6 text-left">
+            <h3 className="font-semibold mb-2">How to navigate:</h3>
+            <ul className="space-y-1 text-sm">
+              <li>• <strong>Voice commands:</strong> Say "Option A", "Option B", "Choice C", "Option D"</li>
+              <li>• <strong>Direct answers:</strong> Say the answer text or numbers 1-4</li>
+              <li>• <strong>Navigation:</strong> Say "next question", "repeat question", "continue"</li>
+              <li>• <strong>Keyboard:</strong> Press 1, 2, 3, 4 or A, B, C, D</li>
+              <li>• <strong>Continue:</strong> Press Enter or Space</li>
+              <li>• <strong>Repeat:</strong> Press R to hear the question again</li>
+              <li>• <strong>Voice input:</strong> Click the microphone button or say "start quiz"</li>
+            </ul>
+          </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
