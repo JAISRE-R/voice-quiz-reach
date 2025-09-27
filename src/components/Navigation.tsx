@@ -1,14 +1,38 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Settings, Home, User, BookOpen, HelpCircle } from 'lucide-react';
+import { Settings, Home, User, BookOpen, HelpCircle, LogOut } from 'lucide-react';
 import { AccessibilityControls, useAccessibility } from './AccessibilityControls';
+import { toast } from '@/hooks/use-toast';
 
 export const Navigation: React.FC = () => {
   const [showAccessibilityControls, setShowAccessibilityControls] = useState(false);
   const { speakText } = useAccessibility();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleNavClick = (section: string) => {
     speakText(`Navigating to ${section}`);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      speakText('Successfully signed out');
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+      navigate('/');
+    } catch (error) {
+      speakText('Error signing out');
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -88,14 +112,40 @@ export const Navigation: React.FC = () => {
               <span className="hidden sm:inline">Accessibility</span>
             </Button>
             
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => handleNavClick('sign in')}
-              aria-label="Sign in to your account"
-            >
-              Sign In
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleNavClick('profile')}
+                  aria-label={`Welcome ${user.email}`}
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">{user.email}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  aria-label="Sign out"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  handleNavClick('sign in');
+                  navigate('/auth');
+                }}
+                aria-label="Sign in to your account"
+              >
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
 
