@@ -12,8 +12,11 @@ export const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleNavClick = (section: string) => {
+  const handleNavClick = (section: string, path?: string) => {
     speakText(`Navigating to ${section}`);
+    if (path) {
+      navigate(path);
+    }
   };
 
   const handleSignOut = async () => {
@@ -56,7 +59,7 @@ export const Navigation: React.FC = () => {
             <div className="hidden md:flex space-x-1">
               <Button
                 variant="ghost"
-                onClick={() => handleNavClick('home')}
+                onClick={() => handleNavClick('home', '/')}
                 className="flex items-center gap-2"
                 aria-label="Go to home page"
               >
@@ -66,7 +69,7 @@ export const Navigation: React.FC = () => {
               
               <Button
                 variant="ghost"
-                onClick={() => handleNavClick('quizzes')}
+                onClick={() => handleNavClick('quizzes', '/quizzes')}
                 className="flex items-center gap-2"
                 aria-label="Browse available quizzes"
               >
@@ -76,7 +79,7 @@ export const Navigation: React.FC = () => {
               
               <Button
                 variant="ghost"
-                onClick={() => handleNavClick('profile')}
+                onClick={() => handleNavClick('profile', '/profile')}
                 className="flex items-center gap-2"
                 aria-label="View your profile"
               >
@@ -117,7 +120,7 @@ export const Navigation: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleNavClick('profile')}
+                  onClick={() => handleNavClick('profile', '/profile')}
                   aria-label={`Welcome ${user.email}`}
                 >
                   <User className="h-4 w-4 mr-1" />
@@ -151,15 +154,15 @@ export const Navigation: React.FC = () => {
 
         {/* Mobile Navigation */}
         <div className="md:hidden mt-3 flex space-x-1 overflow-x-auto pb-2">
-          <Button variant="ghost" size="sm" onClick={() => handleNavClick('home')}>
+          <Button variant="ghost" size="sm" onClick={() => handleNavClick('home', '/')}>
             <Home className="h-4 w-4 mr-1" />
             Home
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleNavClick('quizzes')}>
+          <Button variant="ghost" size="sm" onClick={() => handleNavClick('quizzes', '/quizzes')}>
             <BookOpen className="h-4 w-4 mr-1" />
             Quizzes
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleNavClick('profile')}>
+          <Button variant="ghost" size="sm" onClick={() => handleNavClick('profile', '/profile')}>
             <User className="h-4 w-4 mr-1" />
             Profile
           </Button>
