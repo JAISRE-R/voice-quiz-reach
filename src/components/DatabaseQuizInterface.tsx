@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface Question {
   id: string;
+  quiz_id?: string;
   question_text: string;
   options: string[];
   correct_answer: number;
@@ -64,9 +65,10 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
     try {
       setLoading(true);
       
+      // Fetch questions without answers for security
       const { data, error } = await supabase
         .from('questions')
-        .select('*')
+        .select('id, quiz_id, question_text, options, points, created_at')
         .eq('quiz_id', quizId)
         .order('created_at', { ascending: true });
 
@@ -85,13 +87,13 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
         return;
       }
 
-      // Transform the data to match our Question interface
+      // Transform the data to match our Question interface (without answers)
       const transformedQuestions: Question[] = data.map((q) => ({
         id: q.id,
         question_text: q.question_text,
         options: Array.isArray(q.options) ? q.options as string[] : [],
-        correct_answer: q.correct_answer,
-        explanation: q.explanation,
+        correct_answer: -1, // Will be validated server-side
+        explanation: undefined, // Will be provided after validation
         points: q.points
       }));
 
@@ -99,7 +101,6 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
       setUserAnswers(new Array(data.length).fill(null));
       speakText(`Quiz loaded with ${data.length} questions`);
     } catch (error) {
-      console.error('Error fetching questions:', error);
       toast({
         title: "Error Loading Quiz",
         description: "Failed to load quiz questions. Please try again.",
@@ -133,7 +134,7 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
   useEffect(() => {
     const handleVoiceInput = (event: CustomEvent) => {
       const transcript = event.detail.toLowerCase().trim();
-      console.log('Voice input received:', transcript);
+      // Voice command processing (removed console logging for security)
       
       if (!quizStarted) {
         if (transcript.includes('start quiz') || transcript.includes('begin quiz')) {
@@ -222,7 +223,7 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
     speakText(`Selected option ${optionLetter}: ${currentQuestion.options[answerIndex]}`);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (selectedAnswer === null) {
       speakText("Please select an answer before continuing.");
       toast({
@@ -240,30 +241,62 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
     newUserAnswers[currentQuestionIndex] = selectedAnswer;
     setUserAnswers(newUserAnswers);
 
-    // Check if answer is correct
-    const isCorrect = selectedAnswer === currentQuestion.correct_answer;
-    if (isCorrect) {
-      setScore(prev => prev + currentQuestion.points);
-      speakText("Correct! " + (currentQuestion.explanation || ""));
-    } else {
-      const correctOption = String.fromCharCode(65 + currentQuestion.correct_answer);
-      speakText(`Incorrect. The correct answer is option ${correctOption}: ${currentQuestion.options[currentQuestion.correct_answer]}. ${currentQuestion.explanation || ""}`);
-    }
+    try {
+      // Validate answer securely via edge function
+      const { data: result, error } = await supabase.functions.invoke('validate-quiz-answer', {
+        body: {
+          questionId: currentQuestion.id,
+          selectedAnswer,
+          quizId: quizId
+        }
+      });
 
-    setAnsweredQuestions(prev => [...prev, currentQuestionIndex]);
+      if (error) throw error;
 
-    // Move to next question or end quiz
-    if (currentQuestionIndex < questions.length - 1) {
-      setTimeout(() => {
-        setCurrentQuestionIndex(prev => prev + 1);
-        setSelectedAnswer(null);
-        setShowResult(false);
-        setTimeout(() => speakCurrentQuestion(), 500);
-      }, 3000);
-      setShowResult(true);
-    } else {
-      setTimeout(() => handleQuizEnd(), 2000);
-      setShowResult(true);
+      const { isCorrect, points, explanation } = result;
+      
+      // Update score
+      if (isCorrect) {
+        setScore(prev => prev + points);
+        speakText("Correct! " + (explanation || ""));
+      } else {
+        speakText(`Incorrect. ${explanation || ""}`);
+      }
+
+      setAnsweredQuestions(prev => [...prev, currentQuestionIndex]);
+
+      // Move to next question or end quiz
+      if (currentQuestionIndex < questions.length - 1) {
+        setTimeout(() => {
+          setCurrentQuestionIndex(prev => prev + 1);
+          setSelectedAnswer(null);
+          setShowResult(false);
+          setTimeout(() => speakCurrentQuestion(), 500);
+        }, 3000);
+        setShowResult(true);
+      } else {
+        setTimeout(() => handleQuizEnd(), 2000);
+        setShowResult(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Validation Error",
+        description: "Failed to validate answer. Please try again.",
+        variant: "destructive"
+      });
+      // Continue to next question even on error
+      setAnsweredQuestions(prev => [...prev, currentQuestionIndex]);
+      
+      if (currentQuestionIndex < questions.length - 1) {
+        setTimeout(() => {
+          setCurrentQuestionIndex(prev => prev + 1);
+          setSelectedAnswer(null);
+          setShowResult(false);
+          setTimeout(() => speakCurrentQuestion(), 500);
+        }, 1000);
+      } else {
+        handleQuizEnd();
+      }
     }
   };
 
@@ -300,12 +333,14 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
           });
 
         if (error) {
-          console.error('Error saving score:', error);
+          // Error handling without console logging for security
+          speakText("There was an issue saving your score, but your results are displayed.");
         } else {
           speakText("Your score has been saved to your profile.");
         }
       } catch (error) {
-        console.error('Error saving score:', error);
+        // Error handling without console logging for security
+        speakText("There was an issue saving your score, but your results are displayed.");
       }
     }
     

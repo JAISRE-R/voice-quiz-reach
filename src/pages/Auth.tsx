@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAccessibility } from '@/components/AccessibilityControls';
 import { Eye, EyeOff, Mail, Lock, User as UserIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { signUpSchema, signInSchema } from '@/lib/validation';
 
 const Auth: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -36,8 +37,14 @@ const Auth: React.FC = () => {
     setError(null);
 
     try {
+      // Validate input using Zod
       if (isSignUp) {
-        const { error } = await signUp(email, password, displayName);
+        const validatedData = signUpSchema.parse({
+          email: email.trim(),
+          password,
+          displayName: displayName.trim()
+        });
+        const { error } = await signUp(validatedData.email, validatedData.password, validatedData.displayName);
         if (error) {
           setError(error.message);
           speakText(`Sign up failed: ${error.message}`);
@@ -49,7 +56,11 @@ const Auth: React.FC = () => {
           });
         }
       } else {
-        const { error } = await signIn(email, password);
+        const validatedData = signInSchema.parse({
+          email: email.trim(),
+          password
+        });
+        const { error } = await signIn(validatedData.email, validatedData.password);
         if (error) {
           setError(error.message);
           speakText(`Sign in failed: ${error.message}`);
@@ -61,9 +72,15 @@ const Auth: React.FC = () => {
           });
         }
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
-      speakText('An unexpected error occurred');
+    } catch (err: any) {
+      if (err.errors) {
+        // Zod validation errors
+        setError(err.errors[0]?.message || 'Invalid input provided');
+        speakText(`Validation error: ${err.errors[0]?.message || 'Invalid input provided'}`);
+      } else {
+        setError('An unexpected error occurred');
+        speakText('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +174,7 @@ const Auth: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10"
                 required
-                minLength={6}
+                minLength={8}
                 aria-describedby="password-help"
               />
               <Button
@@ -172,7 +189,7 @@ const Auth: React.FC = () => {
               </Button>
             </div>
             <p id="password-help" className="text-xs text-muted-foreground">
-              {isSignUp ? 'Must be at least 6 characters long' : 'Enter your account password'}
+              {isSignUp ? 'Must be at least 8 characters long' : 'Enter your account password'}
             </p>
           </div>
 
