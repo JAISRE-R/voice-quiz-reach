@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { VoiceNavigationHelper } from '@/components/VoiceNavigationHelper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, Users, BookOpen, PlayCircle } from 'lucide-react';
+import { Clock, Users, BookOpen, PlayCircle, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
@@ -97,13 +98,18 @@ const Quizzes = () => {
 
   return (
     <div className="min-h-screen bg-gradient-background">
+      <VoiceNavigationHelper />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <header className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
+          <header className="text-center mb-12 animate-fade-in-up">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm font-medium">Interactive Learning</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
               Available Quizzes
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Challenge yourself with our collection of interactive quizzes. Track your progress and improve your knowledge.
             </p>
           </header>
@@ -119,33 +125,39 @@ const Quizzes = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quizzes.map((quiz) => (
-                <Card key={quiz.id} className="group hover:shadow-lg transition-all duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {quizzes.map((quiz, index) => (
+                <Card 
+                  key={quiz.id} 
+                  className="group hover:shadow-primary transition-all duration-300 hover:-translate-y-2 animate-fade-in border-2 border-transparent hover:border-primary/20 bg-gradient-to-br from-card to-primary/5"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
                   <CardHeader>
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge className={getDifficultyColor(quiz.difficulty)}>
+                    <div className="flex justify-between items-start mb-3">
+                      <Badge className={`${getDifficultyColor(quiz.difficulty)} px-3 py-1 text-sm font-semibold`}>
                         {quiz.difficulty || 'Medium'}
                       </Badge>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4 mr-1" />
+                      <div className="flex items-center text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                        <Clock className="h-3.5 w-3.5 mr-1" />
                         {formatTimeLimit(quiz.time_limit)}
                       </div>
                     </div>
-                    <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">
+                    <CardTitle className="text-2xl font-bold group-hover:bg-gradient-primary group-hover:bg-clip-text group-hover:text-transparent transition-all">
                       {quiz.title}
                     </CardTitle>
                     {quiz.description && (
-                      <CardDescription className="line-clamp-2">
+                      <CardDescription className="line-clamp-2 text-base">
                         {quiz.description}
                       </CardDescription>
                     )}
                   </CardHeader>
                   
                   <CardContent>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Users className="h-4 w-4 mr-1" />
+                    <div className="flex items-center justify-between mb-5 pb-4 border-b border-border">
+                      <div className="flex items-center text-sm font-medium text-foreground">
+                        <div className="bg-primary/10 p-1.5 rounded-lg mr-2">
+                          <Users className="h-4 w-4 text-primary" />
+                        </div>
                         {quiz.questions?.[0]?.count || 0} questions
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -155,10 +167,10 @@ const Quizzes = () => {
                     
                     <Button 
                       onClick={() => startQuiz(quiz.id)}
-                      className="w-full group-hover:bg-primary-hover transition-colors"
+                      className="w-full bg-gradient-primary shadow-primary hover:shadow-glow transition-all duration-300 group-hover:scale-105 text-base py-6"
                       aria-label={`Start ${quiz.title} quiz`}
                     >
-                      <PlayCircle className="h-4 w-4 mr-2" />
+                      <PlayCircle className="h-5 w-5 mr-2" />
                       Start Quiz
                     </Button>
                   </CardContent>
@@ -167,17 +179,17 @@ const Quizzes = () => {
             </div>
           )}
 
-          <div className="mt-12 text-center">
+          <div className="mt-16 text-center flex gap-4 justify-center animate-fade-in">
             <Button 
               variant="outline" 
               onClick={() => navigate('/')}
-              className="mr-4"
+              className="px-8 py-6 text-base border-2 hover:scale-105 transition-all duration-300"
             >
               Back to Home
             </Button>
             <Button 
               onClick={() => navigate('/profile')}
-              variant="secondary"
+              className="px-8 py-6 text-base bg-gradient-primary shadow-primary hover:shadow-glow hover:scale-105 transition-all duration-300"
             >
               View Profile
             </Button>
