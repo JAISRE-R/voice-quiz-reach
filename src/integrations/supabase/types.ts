@@ -164,6 +164,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_quiz_questions_safe: {
+        Args: { p_quiz_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          options: Json
+          points: number
+          question_text: string
+          quiz_id: string
+        }[]
+      }
       user_has_completed_quiz: {
         Args: { quiz_id: string; user_id: string }
         Returns: boolean

@@ -65,12 +65,9 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
     try {
       setLoading(true);
       
-      // Fetch questions without answers for security
+      // Use secure RPC function that prevents answer exposure
       const { data, error } = await supabase
-        .from('questions')
-        .select('id, quiz_id, question_text, options, points, created_at')
-        .eq('quiz_id', quizId)
-        .order('created_at', { ascending: true });
+        .rpc('get_quiz_questions_safe', { p_quiz_id: quizId });
 
       if (error) {
         throw error;
