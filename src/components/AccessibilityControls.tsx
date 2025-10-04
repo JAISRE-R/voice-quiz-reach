@@ -136,32 +136,57 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const newRecognition = new SpeechRecognition();
       
-      newRecognition.continuous = false;
+      newRecognition.continuous = true;
       newRecognition.interimResults = false;
       newRecognition.lang = 'en-US';
       
       newRecognition.onstart = () => {
+        console.log('Speech recognition started');
         setIsListening(true);
-        speakText("Listening for your answer");
+        speakText("Listening");
       };
       
       newRecognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        // This will be handled by the quiz component
+        const lastResultIndex = event.results.length - 1;
+        const transcript = event.results[lastResultIndex][0].transcript;
+        console.log('Voice transcript:', transcript);
+        
+        // Dispatch custom event for components to handle
         document.dispatchEvent(new CustomEvent('voiceInput', { detail: transcript }));
+        
+        toast({
+          title: "Voice Input Recognized",
+          description: transcript,
+        });
       };
       
       newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
-        toast({
-          title: "Voice Recognition Error",
-          description: "Could not recognize speech. Please try again.",
-          variant: "destructive"
-        });
+        
+        if (event.error === 'no-speech') {
+          toast({
+            title: "No Speech Detected",
+            description: "Please speak clearly and try again.",
+            variant: "destructive"
+          });
+        } else if (event.error === 'not-allowed') {
+          toast({
+            title: "Microphone Access Denied",
+            description: "Please allow microphone access in your browser settings.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Voice Recognition Error",
+            description: `Error: ${event.error}. Please try again.`,
+            variant: "destructive"
+          });
+        }
         setIsListening(false);
       };
       
       newRecognition.onend = () => {
+        console.log('Speech recognition ended');
         setIsListening(false);
       };
       

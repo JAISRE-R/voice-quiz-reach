@@ -300,18 +300,10 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
   const handleQuizEnd = async () => {
     setQuizCompleted(true);
     
-    // Calculate final score
-    let finalScore = 0;
-    let totalPoints = 0;
-    
-    questions.forEach((question, index) => {
-      totalPoints += question.points;
-      if (userAnswers[index] === question.correct_answer) {
-        finalScore += question.points;
-      }
-    });
-
-    const percentage = Math.round((finalScore / totalPoints) * 100);
+    // Use the accumulated score from validated answers
+    const finalScore = score;
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+    const percentage = totalPoints > 0 ? Math.round((finalScore / totalPoints) * 100) : 0;
     
     speakText(`Quiz completed! Your final score is ${finalScore} out of ${totalPoints} points, which is ${percentage} percent.`);
     
