@@ -89,6 +89,16 @@ export const Navigation: React.FC = () => {
               
               <Button
                 variant="ghost"
+                onClick={() => handleNavClick('references', '/references')}
+                className="flex items-center gap-2"
+                aria-label="View references and resources"
+              >
+                <BookOpen className="h-4 w-4" />
+                References
+              </Button>
+              
+              <Button
+                variant="ghost"
                 onClick={() => handleNavClick('help')}
                 className="flex items-center gap-2"
                 aria-label="Get help and support"
@@ -165,6 +175,10 @@ export const Navigation: React.FC = () => {
           <Button variant="ghost" size="sm" onClick={() => handleNavClick('profile', '/profile')}>
             <User className="h-4 w-4 mr-1" />
             Profile
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleNavClick('references', '/references')}>
+            <BookOpen className="h-4 w-4 mr-1" />
+            References
           </Button>
           <Button variant="ghost" size="sm" onClick={() => handleNavClick('help')}>
             <HelpCircle className="h-4 w-4 mr-1" />
