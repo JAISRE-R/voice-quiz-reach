@@ -239,18 +239,8 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
     setUserAnswers(newUserAnswers);
 
     try {
-      // Get user session token for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('Please sign in to take quizzes');
-      }
-
-      // Validate answer securely via edge function with user token
+      // Validate answer securely via edge function
       const { data: result, error } = await supabase.functions.invoke('validate-quiz-answer', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        },
         body: {
           questionId: currentQuestion.id,
           selectedAnswer,
