@@ -49,6 +49,7 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
   const [loading, setLoading] = useState(true);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [currentAnswerResult, setCurrentAnswerResult] = useState<{ isCorrect: boolean; explanation: string | null } | null>(null);
 
   const { speakText, startListening, stopListening, isListening } = useAccessibility();
   const { user } = useAuth();
@@ -252,6 +253,9 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
 
       const { isCorrect, points, explanation } = result;
       
+      // Store the result for UI display
+      setCurrentAnswerResult({ isCorrect, explanation: explanation || null });
+      
       // Update score
       if (isCorrect) {
         setScore(prev => prev + points);
@@ -264,16 +268,30 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
 
       // Move to next question or end quiz
       if (currentQuestionIndex < questions.length - 1) {
+        setShowResult(true);
         setTimeout(() => {
-          setCurrentQuestionIndex(prev => prev + 1);
+          setCurrentQuestionIndex(prev => {
+            const newIndex = prev + 1;
+            // Speak the question after state has fully updated
+            setTimeout(() => {
+              const nextQuestion = questions[newIndex];
+              if (nextQuestion) {
+                const questionText = `Question ${newIndex + 1} of ${questions.length}: ${nextQuestion.question_text}`;
+                const optionsText = nextQuestion.options
+                  .map((option, index) => `Option ${String.fromCharCode(65 + index)}: ${option}`)
+                  .join('. ');
+                speakText(`${questionText}. ${optionsText}`);
+              }
+            }, 100);
+            return newIndex;
+          });
           setSelectedAnswer(null);
           setShowResult(false);
-          setTimeout(() => speakCurrentQuestion(), 500);
+          setCurrentAnswerResult(null);
         }, 3000);
-        setShowResult(true);
       } else {
-        setTimeout(() => handleQuizEnd(), 2000);
         setShowResult(true);
+        setTimeout(() => handleQuizEnd(), 2000);
       }
     } catch (error) {
       toast({
@@ -562,9 +580,10 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
         <div className="grid gap-3">
           {currentQuestion?.options.map((option, index) => {
             const isSelected = selectedAnswer === index;
-            const isCorrect = index === currentQuestion.correct_answer;
-            const showCorrect = showResult && isCorrect;
-            const showIncorrect = showResult && isSelected && !isCorrect;
+            const isAnswerCorrect = currentAnswerResult?.isCorrect && isSelected;
+            const isAnswerIncorrect = currentAnswerResult && !currentAnswerResult.isCorrect && isSelected;
+            const showCorrect = showResult && isAnswerCorrect;
+            const showIncorrect = showResult && isAnswerIncorrect;
             
             return (
               <Button
