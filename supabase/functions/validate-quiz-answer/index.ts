@@ -1,10 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const quizAnswerSchema = z.object({
+  questionId: z.string().uuid('Invalid question ID format'),
+  selectedAnswer: z.number().int().min(0).max(3, 'Answer must be between 0-3'),
+  quizId: z.string().uuid('Invalid quiz ID format'),
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -38,14 +46,22 @@ serve(async (req) => {
       });
     }
 
-    const { questionId, selectedAnswer, quizId } = await req.json();
-
-    if (!questionId || selectedAnswer === undefined || !quizId) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+    const body = await req.json();
+    
+    // Validate input using Zod schema
+    const validation = quizAnswerSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input data',
+        details: validation.error.errors.map(e => e.message).join(', ')
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    const { questionId, selectedAnswer, quizId } = validation.data;
 
     // Get the correct answer using service role (bypasses RLS)
     const { data: question, error: questionError } = await supabaseClient
@@ -56,7 +72,6 @@ serve(async (req) => {
       .single();
 
     if (questionError || !question) {
-      console.error('Error fetching question:', questionError);
       return new Response(JSON.stringify({ error: 'Question not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -76,7 +91,6 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in validate-quiz-answer function:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

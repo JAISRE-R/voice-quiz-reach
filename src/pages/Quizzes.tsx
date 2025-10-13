@@ -52,7 +52,6 @@ const Quizzes = () => {
       if (error) throw error;
       setQuizzes(data || []);
     } catch (error) {
-      console.error('Error fetching quizzes:', error);
       toast({
         title: "Error",
         description: "Failed to load quizzes. Please try again.",

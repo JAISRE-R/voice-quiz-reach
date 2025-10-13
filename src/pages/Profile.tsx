@@ -122,7 +122,6 @@ const Profile = () => {
       setScores(scoresData || []);
 
     } catch (error) {
-      console.error('Error fetching user data:', error);
       toast({
         title: "Error",
         description: "Failed to load profile data. Please try again.",
@@ -153,7 +152,6 @@ const Profile = () => {
         description: "Profile updated successfully!",
       });
     } catch (error) {
-      console.error('Error saving profile:', error);
       toast({
         title: "Error", 
         description: "Failed to save profile. Please try again.",

@@ -141,7 +141,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       newRecognition.lang = 'en-US';
       
       newRecognition.onstart = () => {
-        console.log('Speech recognition started');
         setIsListening(true);
         speakText("Listening");
       };
@@ -149,7 +148,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       newRecognition.onresult = (event: SpeechRecognitionEvent) => {
         const lastResultIndex = event.results.length - 1;
         const transcript = event.results[lastResultIndex][0].transcript;
-        console.log('Voice transcript:', transcript);
         
         // Dispatch custom event for components to handle
         document.dispatchEvent(new CustomEvent('voiceInput', { detail: transcript }));
@@ -161,8 +159,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       };
       
       newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        
         if (event.error === 'no-speech') {
           toast({
             title: "No Speech Detected",
@@ -186,14 +182,12 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       };
       
       newRecognition.onend = () => {
-        console.log('Speech recognition ended');
         setIsListening(false);
       };
       
       setRecognition(newRecognition);
       newRecognition.start();
     } catch (error) {
-      console.error('Error starting speech recognition:', error);
       toast({
         title: "Voice Recognition Error",
         description: "Could not start voice recognition.",
