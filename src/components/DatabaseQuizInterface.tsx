@@ -318,43 +318,55 @@ export const DatabaseQuizInterface: React.FC<DatabaseQuizInterfaceProps> = ({
   const handleQuizEnd = async () => {
     setQuizCompleted(true);
     
-    // Use the accumulated score from validated answers
-    const finalScore = score;
-    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-    const percentage = totalPoints > 0 ? Math.round((finalScore / totalPoints) * 100) : 0;
-    
-    speakText(`Quiz completed! Your final score is ${finalScore} out of ${totalPoints} points, which is ${percentage} percent.`);
-    
-    // Save score to database if user is authenticated
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('user_scores')
-          .insert({
-            user_id: user.id,
-            quiz_id: quizId,
-            score: finalScore,
-            total_questions: questions.length,
-            time_taken: quiz.time_limit - timeRemaining,
-            answers: userAnswers
-          });
+    try {
+      // Submit all answers to server for validation and score calculation
+      const answersPayload = questions.map((question, index) => ({
+        questionId: question.id,
+        selectedAnswer: userAnswers[index] ?? 0,
+      }));
 
-        if (error) {
-          // Error handling without console logging for security
-          speakText("There was an issue saving your score, but your results are displayed.");
-        } else {
-          speakText("Your score has been saved to your profile.");
-        }
-      } catch (error) {
-        // Error handling without console logging for security
+      const { data, error } = await supabase.functions.invoke('submit-quiz-results', {
+        body: {
+          quizId,
+          answers: answersPayload,
+          timeTaken: quiz.time_limit - timeRemaining,
+        },
+      });
+
+      if (error) throw error;
+
+      // Use server-calculated score
+      const finalScore = data.score;
+      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+      const percentage = totalPoints > 0 ? Math.round((finalScore / totalPoints) * 100) : 0;
+      
+      speakText(`Quiz completed! Your final score is ${finalScore} out of ${totalPoints} points, which is ${percentage} percent.`);
+      
+      if (data.saved) {
+        speakText("Your score has been saved to your profile.");
+      } else if (user) {
         speakText("There was an issue saving your score, but your results are displayed.");
       }
+      
+      toast({
+        title: "Quiz Completed!",
+        description: `You scored ${finalScore}/${totalPoints} points (${percentage}%)`,
+      });
+    } catch (error) {
+      // Fallback to client-side calculation if server fails
+      const finalScore = score;
+      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+      const percentage = totalPoints > 0 ? Math.round((finalScore / totalPoints) * 100) : 0;
+      
+      speakText(`Quiz completed! Your final score is ${finalScore} out of ${totalPoints} points, which is ${percentage} percent.`);
+      speakText("There was an issue validating your score on the server.");
+      
+      toast({
+        title: "Quiz Completed!",
+        description: `You scored ${finalScore}/${totalPoints} points (${percentage}%)`,
+        variant: "destructive",
+      });
     }
-    
-    toast({
-      title: "Quiz Completed!",
-      description: `You scored ${finalScore}/${totalPoints} points (${percentage}%)`,
-    });
   };
 
   const formatTime = (seconds: number) => {

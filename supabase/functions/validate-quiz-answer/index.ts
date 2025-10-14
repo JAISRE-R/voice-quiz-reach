@@ -7,6 +7,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 100; // 100 requests per minute per IP
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+// Clean up old rate limit entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (value.resetAt < now) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
+
 // Input validation schema
 const quizAnswerSchema = z.object({
   questionId: z.string().uuid('Invalid question ID format'),
@@ -21,6 +36,43 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting: Get client IP
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    const now = Date.now();
+    const rateLimitKey = `validate-${clientIp}`;
+    const rateLimitData = rateLimitStore.get(rateLimitKey);
+
+    if (rateLimitData) {
+      if (rateLimitData.resetAt > now) {
+        // Within window
+        if (rateLimitData.count >= MAX_REQUESTS_PER_WINDOW) {
+          console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+          return new Response(JSON.stringify({ 
+            error: 'Rate limit exceeded',
+            retryAfter: Math.ceil((rateLimitData.resetAt - now) / 1000)
+          }), {
+            status: 429,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json',
+              'Retry-After': Math.ceil((rateLimitData.resetAt - now) / 1000).toString()
+            },
+          });
+        }
+        rateLimitData.count++;
+      } else {
+        // Window expired, reset
+        rateLimitStore.set(rateLimitKey, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+      }
+    } else {
+      // First request from this IP
+      rateLimitStore.set(rateLimitKey, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    }
+
+    console.log(`Request from ${clientIp}: ${rateLimitStore.get(rateLimitKey)?.count}/${MAX_REQUESTS_PER_WINDOW}`);
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
